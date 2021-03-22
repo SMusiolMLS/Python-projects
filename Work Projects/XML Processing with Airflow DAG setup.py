@@ -65,8 +65,8 @@ def tsd_processing(file):
         node_id = step.get('nodeID')
         process_step = step.get('processstep')
 
-        # need to create dictionary like sample_id: 'sample_id', module_id:[list of timestamps]
-        # to check length of list for a key, use len(log_dict[key][nested key])
+    # need to create dictionary like sample_id: 'sample_id', module_id:[list of timestamps]
+    # to check length of list for a key, use len(log_dict[key][nested key])
         if sample_id not in log_dict:
             sample_pass.update({sample_id: 1})
             log_dict[sample_id] = {'pass 1': None}
@@ -85,54 +85,126 @@ def tsd_processing(file):
                     log_dict[sample_id]['pass ' + str(pass_count)]['input_module'] = node_id
                     log_dict[sample_id]['pass ' + str(pass_count)]['input_time'] = process_dt
                 elif node_id[:3] == "DSM":
-                    log_dict[sample_id]['pass ' + str(pass_count)]['desealed_time'] = process_dt
+                    try:
+                        log_dict[sample_id]['pass ' + str(pass_count)]['desealed_time'] = process_dt
+                    except KeyError:
+                        log_dict[sample_id].update({'pass ' + str(pass_count): None})
+                        log_dict[sample_id]['pass ' + str(pass_count)] = dict.fromkeys(log_keys)
+                        log_dict[sample_id]['pass ' + str(pass_count)]['desealed_time'] = process_dt
                 elif node_id[:3] == "RCM":
-                    log_dict[sample_id]['pass ' + str(pass_count)]['recapped_time'] = process_dt
+                    try:
+                        log_dict[sample_id]['pass ' + str(pass_count)]['recapped_time'] = process_dt
+                    except KeyError:
+                        log_dict[sample_id].update({'pass ' + str(pass_count): None})
+                        log_dict[sample_id]['pass ' + str(pass_count)] = dict.fromkeys(log_keys)
+                        log_dict[sample_id]['pass ' + str(pass_count)]['recapped_time'] = process_dt
                 elif node_id[:3] == "DCM":
-                    log_dict[sample_id]['pass ' + str(pass_count)]['decapped_time'] = process_dt
+                    try:
+                        log_dict[sample_id]['pass ' + str(pass_count)]['decapped_time'] = process_dt
+                    except KeyError:
+                        log_dict[sample_id].update({'pass ' + str(pass_count): None})
+                        log_dict[sample_id]['pass ' + str(pass_count)] = dict.fromkeys(log_keys)
+                        log_dict[sample_id]['pass ' + str(pass_count)]['decapped_time'] = process_dt
                 elif node_id[:2] == "CM":
-                    log_dict[sample_id]['pass ' + str(pass_count)]['CM'] = node_id
-                    log_dict[sample_id]['pass ' + str(pass_count)]['CM_output'] = process_dt
+                    try:
+                        log_dict[sample_id]['pass ' + str(pass_count)]['CM'] = node_id
+                        log_dict[sample_id]['pass ' + str(pass_count)]['CM_output'] = process_dt
+                    except KeyError:
+                        log_dict[sample_id].update({'pass ' + str(pass_count): None})
+                        log_dict[sample_id]['pass ' + str(pass_count)] = dict.fromkeys(log_keys)
+                        log_dict[sample_id]['pass ' + str(pass_count)]['decapped_time'] = process_dt
                 elif node_id[:3] in ["HIM", "STR", "IAU"]:
-                    log_dict[sample_id]['pass ' + str(pass_count)]['PNP'] = node_id
-                    log_dict[sample_id]['pass ' + str(pass_count)]['PNP_output'] = process_dt
+                    try:
+                        log_dict[sample_id]['pass ' + str(pass_count)]['PNP'] = node_id
+                        log_dict[sample_id]['pass ' + str(pass_count)]['PNP_output'] = process_dt
+                    except KeyError:
+                        log_dict[sample_id].update({'pass ' + str(pass_count): None})
+                        log_dict[sample_id]['pass ' + str(pass_count)] = dict.fromkeys(log_keys)
+                        log_dict[sample_id]['pass ' + str(pass_count)]['PNP'] = node_id
+                        log_dict[sample_id]['pass ' + str(pass_count)]['PNP_output'] = process_dt
                 elif node_id[:3] in ["C16", "ISR", "ATL", "G8", "BP2", "250", "AIA", "ICQ", "LXL"]:
                     for i in range(1, 7):
-                        if log_dict[sample_id]['pass ' + str(pass_count)][str(i) + '_inst'] is None:
-                            log_dict[sample_id]['pass ' + str(pass_count)][str(i) + '_inst'] = node_id
-                            log_dict[sample_id]['pass ' + str(pass_count)][str(i) + '_inst_presented'] = process_dt
-                            break
-                        elif node_id[:2] == "SM":
-                            log_dict[sample_id]['pass ' + str(pass_count)]['sealed'] = process_dt
-                        elif node_id[:3] == "AQM":
-                            if log_dict[sample_id]['pass ' + str(pass_count)]['aliquot'] is None:
-                                log_dict[sample_id]['pass ' + str(pass_count)]['aliquot'] = process_dt
-                            # need to remove the daughter aliquot time. This usually occurs within 2 minutes of the previous aliquot time.
-                            # timedelta function doesn't have minutes, but does have seconds.
-                            elif log_dict[sample_id]['pass ' + str(pass_count)]['aliquot'] is not None and (
-                                    (process_dt -
-                                     log_dict[
-                                         sample_id][
-                                         'pass ' + str(
-                                             pass_count)][
-                                         'aliquot']).seconds / 60) <= 2:
-                                pass
-                        elif process_step == 'Unloaded':
-                            if node_id[:2] == "CM":
-                                log_dict[sample_id]['pass ' + str(pass_count)]['CM_input'] = process_dt
-                            elif node_id[:3] in ["HIM", "STR", "IAU"]:
-                                log_dict[sample_id]['pass ' + str(pass_count)]['PNP_input'] = process_dt
-                            elif node_id[:3] in ["IOM", "ROM", "SRM"]:
-                                if pass_count > 1 and ((process_dt - log_dict[sample_id]['pass ' + str(pass_count - 1)][
-                                    'output_time']).seconds / 60) <= 2:
-                                    pass
-                                elif len(carrier_id) == 0:
-                                    pass
-                                else:
-                                    log_dict[sample_id]['pass ' + str(pass_count)]['output_module'] = node_id
-                                    log_dict[sample_id]['pass ' + str(pass_count)]['output_time'] = process_dt
-                                    sample_pass[sample_id] = sample_pass[sample_id] + 1
-
+                        try:
+                            if log_dict[sample_id]['pass ' + str(pass_count)][str(i) + '_inst'] is None:
+                                log_dict[sample_id]['pass ' + str(pass_count)][str(i) + '_inst'] = node_id
+                                log_dict[sample_id]['pass ' + str(pass_count)][str(i) + '_inst_presented'] = process_dt
+                                break
+                        except KeyError:
+                            log_dict[sample_id].update({'pass ' + str(pass_count): None})
+                            log_dict[sample_id]['pass ' + str(pass_count)] = dict.fromkeys(log_keys)
+                            if log_dict[sample_id]['pass ' + str(pass_count)][str(i) + '_inst'] is None:
+                                log_dict[sample_id]['pass ' + str(pass_count)][str(i) + '_inst'] = node_id
+                                log_dict[sample_id]['pass ' + str(pass_count)][str(i) + '_inst_presented'] = process_dt
+                                break
+                elif node_id[:2] == "SM":
+                    try:
+                        log_dict[sample_id]['pass ' + str(pass_count)]['sealed'] = process_dt
+                    except KeyError:
+                        log_dict[sample_id].update({'pass ' + str(pass_count): None})
+                        log_dict[sample_id]['pass ' + str(pass_count)] = dict.fromkeys(log_keys)
+                        log_dict[sample_id]['pass ' + str(pass_count)]['sealed'] = process_dt
+                elif node_id[:3] == "AQM":
+                    try:
+                        if log_dict[sample_id]['pass ' + str(pass_count)]['aliquot'] is None:
+                            log_dict[sample_id]['pass ' + str(pass_count)]['aliquot'] = process_dt
+                        # need to remove the daughter aliquot time. This usually occurs within 2 minutes of the previous aliquot time.
+                        # timedelta function doesn't have minutes, but does have seconds.
+                        elif log_dict[sample_id]['pass ' + str(pass_count)]['aliquot'] is not None and (
+                                (process_dt -
+                                    log_dict[
+                                        sample_id][
+                                        'pass ' + str(
+                                            pass_count)][
+                                        'aliquot']).seconds / 60) <= 2:
+                            pass
+                    except KeyError:
+                        log_dict[sample_id].update({'pass ' + str(pass_count): None})
+                        log_dict[sample_id]['pass ' + str(pass_count)] = dict.fromkeys(log_keys)
+                        if log_dict[sample_id]['pass ' + str(pass_count)]['aliquot'] is None:
+                            log_dict[sample_id]['pass ' + str(pass_count)]['aliquot'] = process_dt
+                        # need to remove the daughter aliquot time. This usually occurs within 2 minutes of the previous aliquot time.
+                        # timedelta function doesn't have minutes, but does have seconds.
+                        elif log_dict[sample_id]['pass ' + str(pass_count)]['aliquot'] is not None and (
+                                (process_dt -
+                                    log_dict[
+                                        sample_id][
+                                        'pass ' + str(
+                                            pass_count)][
+                                        'aliquot']).seconds / 60) <= 2:
+                            pass
+            elif process_step == 'Unloaded':
+                if node_id[:2] == "CM":
+                    try:
+                        log_dict[sample_id]['pass ' + str(pass_count)]['CM_input'] = process_dt
+                    except KeyError:
+                        log_dict[sample_id].update({'pass ' + str(pass_count): None})
+                        log_dict[sample_id]['pass ' + str(pass_count)] = dict.fromkeys(log_keys)
+                        log_dict[sample_id]['pass ' + str(pass_count)]['CM_input'] = process_dt
+                elif node_id[:3] in ["HIM", "STR", "IAU"]:
+                    try:
+                        log_dict[sample_id]['pass ' + str(pass_count)]['PNP_input'] = process_dt
+                    except KeyError:
+                        log_dict[sample_id].update({'pass ' + str(pass_count): None})
+                        log_dict[sample_id]['pass ' + str(pass_count)] = dict.fromkeys(log_keys)
+                        log_dict[sample_id]['pass ' + str(pass_count)]['PNP_input'] = process_dt
+                elif node_id[:3] in ["IOM", "ROM", "SRM"]:
+                    if pass_count > 1 and ((process_dt - log_dict[sample_id]['pass ' + str(pass_count - 1)][
+                        'output_time']).seconds / 60) <= 2:
+                        pass
+                    elif len(carrier_id) == 0:
+                        pass
+                    else:
+                        try:
+                            log_dict[sample_id]['pass ' + str(pass_count)]['output_module'] = node_id
+                            log_dict[sample_id]['pass ' + str(pass_count)]['output_time'] = process_dt
+                            sample_pass[sample_id] = sample_pass[sample_id] + 1
+                        except KeyError:
+                            log_dict[sample_id].update({'pass ' + str(pass_count): None})
+                            log_dict[sample_id]['pass ' + str(pass_count)] = dict.fromkeys(log_keys)
+                            log_dict[sample_id]['pass ' + str(pass_count)]['output_module'] = node_id
+                            log_dict[sample_id]['pass ' + str(pass_count)]['output_time'] = process_dt
+                            sample_pass[sample_id] = sample_pass[sample_id] + 1
+                            
     log_fields = ['sample_id', 'input_module', 'input_time', 'desealed_time', 'CM', 'CM_input', 'CM_output',
                   'decapped_time', 'PNP', 'PNP_input', 'PNP_output', 'aliquot',
                   'recapped_time', '1_inst', '1_inst_presented', '2_inst', '2_inst_presented', '3_inst',
